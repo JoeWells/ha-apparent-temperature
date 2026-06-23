@@ -30,6 +30,12 @@ CONF_SETUP_TYPE: Final = "setup_type"
 SETUP_TYPE_MANUAL: Final = "manual"
 SETUP_TYPE_WEATHER: Final = "weather"
 SETUP_TYPE_CLIMATE: Final = "climate"
+SETUP_TYPE_DISCOVER: Final = "discover"
+
+CONF_DISCOVER_BY: Final = "discover_by"
+CONF_DISCOVER_SELECTION: Final = "selection"
+DISCOVER_BY_AREA: Final = "area"
+DISCOVER_BY_DEVICE: Final = "device"
 
 
 # Attributes

@@ -5,20 +5,29 @@ from __future__ import annotations
 from typing import Final
 
 from homeassistant import config_entries
+from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
+from homeassistant.helpers import area_registry as ar
+from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.apparent_temperature.const import (
     CONF_CLIMATE_ENTITY,
+    CONF_DISCOVER_BY,
+    CONF_DISCOVER_SELECTION,
     CONF_HUMIDITY,
     CONF_SETUP_TYPE,
     CONF_TEMPERATURE,
     CONF_WEATHER_ENTITY,
     CONF_WIND_SPEED,
+    DISCOVER_BY_AREA,
+    DISCOVER_BY_DEVICE,
     DOMAIN,
     SETUP_TYPE_CLIMATE,
+    SETUP_TYPE_DISCOVER,
     SETUP_TYPE_MANUAL,
     SETUP_TYPE_WEATHER,
 )
@@ -263,6 +272,205 @@ async def test_options_flow_saves_changes(hass: HomeAssistant) -> None:
     assert entry.options[CONF_TEMPERATURE] == new_temp
     assert entry.options[CONF_HUMIDITY] == new_hum
     assert entry.options[CONF_NAME] == "Updated"
+
+
+# ---------------------------------------------------------------------------
+# Auto-discover tests
+# ---------------------------------------------------------------------------
+
+
+def _register_sensor(
+    entity_reg: er.EntityRegistry,
+    platform: str,
+    unique_id: str,
+    device_class: SensorDeviceClass,
+    area_id: str | None = None,
+    device_id: str | None = None,
+) -> er.RegistryEntry:
+    """Helper: create a sensor entity in the registry with a given device class."""
+    entry = entity_reg.async_get_or_create(
+        "sensor",
+        platform,
+        unique_id,
+        original_device_class=device_class,
+        device_id=device_id,
+    )
+    entity_reg.async_update_entity(entry.entity_id, area_id=area_id)
+    return entry
+
+
+async def test_discover_step_shows_discover_by_form(hass: HomeAssistant) -> None:
+    """Selecting auto-discover opens the group-by step."""
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_SETUP_TYPE: SETUP_TYPE_DISCOVER}
+    )
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "discover_by"
+
+
+async def test_discover_by_area_aborts_when_no_pairs(hass: HomeAssistant) -> None:
+    """Abort when no areas have matching temp+humidity pairs."""
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_SETUP_TYPE: SETUP_TYPE_DISCOVER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_DISCOVER_BY: DISCOVER_BY_AREA}
+    )
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "no_devices_found"
+
+
+async def test_discover_by_area_shows_select_form(hass: HomeAssistant) -> None:
+    """A full area with temp+humidity reaches the discover_select step."""
+    area_reg = ar.async_get(hass)
+    entity_reg = er.async_get(hass)
+
+    living_room = area_reg.async_create("Living Room")
+    _register_sensor(entity_reg, "test", "lr_temp", SensorDeviceClass.TEMPERATURE, area_id=living_room.id)
+    _register_sensor(entity_reg, "test", "lr_hum", SensorDeviceClass.HUMIDITY, area_id=living_room.id)
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_SETUP_TYPE: SETUP_TYPE_DISCOVER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_DISCOVER_BY: DISCOVER_BY_AREA}
+    )
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "discover_select"
+
+
+async def test_discover_by_area_creates_entry(hass: HomeAssistant) -> None:
+    """Selecting an area pair creates a config entry with the area name as title."""
+    area_reg = ar.async_get(hass)
+    entity_reg = er.async_get(hass)
+
+    living_room = area_reg.async_create("Living Room")
+    temp = _register_sensor(entity_reg, "test", "lr_temp", SensorDeviceClass.TEMPERATURE, area_id=living_room.id)
+    hum = _register_sensor(entity_reg, "test", "lr_hum", SensorDeviceClass.HUMIDITY, area_id=living_room.id)
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_SETUP_TYPE: SETUP_TYPE_DISCOVER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_DISCOVER_BY: DISCOVER_BY_AREA}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_DISCOVER_SELECTION: [temp.entity_id]}
+    )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["title"] == "Living Room"
+    assert result["data"][CONF_TEMPERATURE] == temp.entity_id
+    assert result["data"][CONF_HUMIDITY] == hum.entity_id
+    assert result["data"][CONF_SETUP_TYPE] == SETUP_TYPE_MANUAL
+
+
+async def test_discover_multiple_areas_creates_additional_flows(hass: HomeAssistant) -> None:
+    """Selecting multiple areas creates one entry plus queued flows for the rest."""
+    area_reg = ar.async_get(hass)
+    entity_reg = er.async_get(hass)
+
+    kitchen = area_reg.async_create("Kitchen")
+    bedroom = area_reg.async_create("Bedroom")
+
+    kt = _register_sensor(entity_reg, "test", "kt_temp", SensorDeviceClass.TEMPERATURE, area_id=kitchen.id)
+    _register_sensor(entity_reg, "test", "kt_hum", SensorDeviceClass.HUMIDITY, area_id=kitchen.id)
+    bt = _register_sensor(entity_reg, "test", "bd_temp", SensorDeviceClass.TEMPERATURE, area_id=bedroom.id)
+    _register_sensor(entity_reg, "test", "bd_hum", SensorDeviceClass.HUMIDITY, area_id=bedroom.id)
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_SETUP_TYPE: SETUP_TYPE_DISCOVER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_DISCOVER_BY: DISCOVER_BY_AREA}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {CONF_DISCOVER_SELECTION: [kt.entity_id, bt.entity_id]},
+    )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+
+    # The import flows for additional entries run on the next tick
+    await hass.async_block_till_done()
+    entries = hass.config_entries.async_entries(DOMAIN)
+    assert len(entries) == 2
+
+
+async def test_discover_skips_already_configured(hass: HomeAssistant) -> None:
+    """Temperature entities already in an entry are excluded from discovery."""
+    area_reg = ar.async_get(hass)
+    entity_reg = er.async_get(hass)
+
+    living_room = area_reg.async_create("Living Room")
+    temp = _register_sensor(entity_reg, "test", "lr_temp", SensorDeviceClass.TEMPERATURE, area_id=living_room.id)
+    _register_sensor(entity_reg, "test", "lr_hum", SensorDeviceClass.HUMIDITY, area_id=living_room.id)
+
+    # Pre-configure an entry using the temperature entity
+    MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_SETUP_TYPE: SETUP_TYPE_MANUAL, CONF_TEMPERATURE: temp.entity_id, CONF_HUMIDITY: "sensor.other"},
+    ).add_to_hass(hass)
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_SETUP_TYPE: SETUP_TYPE_DISCOVER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_DISCOVER_BY: DISCOVER_BY_AREA}
+    )
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "no_devices_found"
+
+
+async def test_discover_by_device_creates_entry(hass: HomeAssistant) -> None:
+    """Selecting a device pair creates a config entry named after the device."""
+    device_reg = dr.async_get(hass)
+    entity_reg = er.async_get(hass)
+
+    # Device registry requires a real config entry to link against
+    owner_entry = MockConfigEntry(domain="test")
+    owner_entry.add_to_hass(hass)
+
+    device = device_reg.async_get_or_create(
+        config_entry_id=owner_entry.entry_id,
+        identifiers={("test", "weather_station_1")},
+        name="Weather Station",
+    )
+    temp = _register_sensor(entity_reg, "test", "ws_temp", SensorDeviceClass.TEMPERATURE, device_id=device.id)
+    hum = _register_sensor(entity_reg, "test", "ws_hum", SensorDeviceClass.HUMIDITY, device_id=device.id)
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_SETUP_TYPE: SETUP_TYPE_DISCOVER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_DISCOVER_BY: DISCOVER_BY_DEVICE}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_DISCOVER_SELECTION: [temp.entity_id]}
+    )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["title"] == "Weather Station"
+    assert result["data"][CONF_TEMPERATURE] == temp.entity_id
+    assert result["data"][CONF_HUMIDITY] == hum.entity_id
 
 
 async def test_options_flow_reads_from_options_over_data(hass: HomeAssistant) -> None:

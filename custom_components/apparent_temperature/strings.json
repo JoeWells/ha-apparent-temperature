@@ -44,6 +44,24 @@
                     "wind_speed": "Optional. Without it, wind chill is excluded from the calculation.",
                     "name": "Leave blank to auto-generate a name from the climate entity."
                 }
+            },
+            "discover_by": {
+                "title": "Auto-discover",
+                "data": {
+                    "discover_by": "Group sensors by"
+                },
+                "data_description": {
+                    "discover_by": "Sensors assigned to the same room or device will be paired together."
+                }
+            },
+            "discover_select": {
+                "title": "Select sources to add",
+                "data": {
+                    "selection": "Discovered sources"
+                },
+                "data_description": {
+                    "selection": "Each selected source will become a separate Apparent Temperature sensor. Sources already configured are excluded."
+                }
             }
         }
     },
@@ -85,5 +103,8 @@
                 }
             }
         }
+    },
+    "abort": {
+        "no_devices_found": "No unconfigured rooms or devices with both temperature and humidity sensors were found."
     }
 }
