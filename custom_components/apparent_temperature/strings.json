@@ -52,6 +52,9 @@
                 },
                 "data_description": {
                     "discover_by": "Sensors assigned to the same room or device will be paired together."
+                },
+                "error": {
+                    "no_devices_found": "No unconfigured rooms or devices with both a temperature sensor and a humidity sensor were found. Try the other grouping option, or set up sensors manually."
                 }
             },
             "discover_select": {

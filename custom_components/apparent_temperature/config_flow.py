@@ -235,6 +235,8 @@ class ApparentTemperatureConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.ConfigFlowResult:
         """Ask whether to group by area or by device."""
+        errors: dict[str, str] = {}
+
         if user_input is not None:
             discover_by = user_input[CONF_DISCOVER_BY]
             pairs = (
@@ -242,14 +244,15 @@ class ApparentTemperatureConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 if discover_by == DISCOVER_BY_AREA
                 else self._find_device_pairs()
             )
-            if not pairs:
-                return self.async_abort(reason="no_devices_found")
-            self._discovered_pairs = pairs
-            return await self.async_step_discover_select()
+            if pairs:
+                self._discovered_pairs = pairs
+                return await self.async_step_discover_select()
+            errors[CONF_DISCOVER_BY] = "no_devices_found"
 
         return self.async_show_form(
             step_id="discover_by",
             data_schema=STEP_DISCOVER_BY_SCHEMA,
+            errors=errors,
         )
 
     async def async_step_discover_select(

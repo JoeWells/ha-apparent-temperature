@@ -311,8 +311,8 @@ async def test_discover_step_shows_discover_by_form(hass: HomeAssistant) -> None
     assert result["step_id"] == "discover_by"
 
 
-async def test_discover_by_area_aborts_when_no_pairs(hass: HomeAssistant) -> None:
-    """Abort when no areas have matching temp+humidity pairs."""
+async def test_discover_by_area_shows_error_when_no_pairs(hass: HomeAssistant) -> None:
+    """Show an inline error on discover_by when no areas have matching pairs."""
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
@@ -322,8 +322,9 @@ async def test_discover_by_area_aborts_when_no_pairs(hass: HomeAssistant) -> Non
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], {CONF_DISCOVER_BY: DISCOVER_BY_AREA}
     )
-    assert result["type"] is FlowResultType.ABORT
-    assert result["reason"] == "no_devices_found"
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "discover_by"
+    assert result["errors"] == {CONF_DISCOVER_BY: "no_devices_found"}
 
 
 async def test_discover_by_area_shows_select_form(hass: HomeAssistant) -> None:
@@ -434,8 +435,9 @@ async def test_discover_skips_already_configured(hass: HomeAssistant) -> None:
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], {CONF_DISCOVER_BY: DISCOVER_BY_AREA}
     )
-    assert result["type"] is FlowResultType.ABORT
-    assert result["reason"] == "no_devices_found"
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "discover_by"
+    assert result["errors"] == {CONF_DISCOVER_BY: "no_devices_found"}
 
 
 async def test_discover_by_device_creates_entry(hass: HomeAssistant) -> None:
