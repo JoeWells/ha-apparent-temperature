@@ -39,47 +39,45 @@ TEST_WEATHER: Final = "weather.outdoor"
 TEST_CLIMATE: Final = "climate.living_room"
 
 
-async def test_user_step_shows_type_form(hass: HomeAssistant) -> None:
-    """Test the user step shows setup type selection."""
-    result = await hass.config_entries.flow.async_init(
+async def _start_flow(hass: HomeAssistant) -> dict:
+    """Start a fresh config flow and return the initial (menu) result."""
+    return await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] is FlowResultType.FORM
+
+
+async def test_user_step_shows_menu(hass: HomeAssistant) -> None:
+    """Test the user step shows a setup-type menu (not a form)."""
+    result = await _start_flow(hass)
+    assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "user"
-    assert not result.get("errors")
 
 
 async def test_user_step_manual_proceeds_to_manual_config(hass: HomeAssistant) -> None:
-    """Test selecting manual type proceeds to the manual_config step."""
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
-    )
+    """Test selecting manual proceeds to the manual_config step."""
+    result = await _start_flow(hass)
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {CONF_SETUP_TYPE: SETUP_TYPE_MANUAL}
+        result["flow_id"], {"next_step_id": "manual_config"}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "manual_config"
 
 
 async def test_user_step_weather_proceeds_to_weather_config(hass: HomeAssistant) -> None:
-    """Test selecting weather type proceeds to the weather_config step."""
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
-    )
+    """Test selecting weather proceeds to the weather_config step."""
+    result = await _start_flow(hass)
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {CONF_SETUP_TYPE: SETUP_TYPE_WEATHER}
+        result["flow_id"], {"next_step_id": "weather_config"}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "weather_config"
 
 
 async def test_user_step_climate_proceeds_to_climate_config(hass: HomeAssistant) -> None:
-    """Test selecting climate type proceeds to the climate_config step."""
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
-    )
+    """Test selecting climate proceeds to the climate_config step."""
+    result = await _start_flow(hass)
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {CONF_SETUP_TYPE: SETUP_TYPE_CLIMATE}
+        result["flow_id"], {"next_step_id": "climate_config"}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "climate_config"
@@ -87,11 +85,9 @@ async def test_user_step_climate_proceeds_to_climate_config(hass: HomeAssistant)
 
 async def test_manual_config_creates_entry(hass: HomeAssistant) -> None:
     """Test that valid manual input creates a config entry."""
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
-    )
+    result = await _start_flow(hass)
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {CONF_SETUP_TYPE: SETUP_TYPE_MANUAL}
+        result["flow_id"], {"next_step_id": "manual_config"}
     )
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
@@ -107,11 +103,9 @@ async def test_manual_config_creates_entry(hass: HomeAssistant) -> None:
 
 async def test_manual_config_with_wind_and_name(hass: HomeAssistant) -> None:
     """Test manual config with optional wind speed and custom name."""
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
-    )
+    result = await _start_flow(hass)
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {CONF_SETUP_TYPE: SETUP_TYPE_MANUAL}
+        result["flow_id"], {"next_step_id": "manual_config"}
     )
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
@@ -130,11 +124,9 @@ async def test_manual_config_with_wind_and_name(hass: HomeAssistant) -> None:
 
 async def test_weather_config_creates_entry(hass: HomeAssistant) -> None:
     """Test that weather entity selection creates a config entry."""
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
-    )
+    result = await _start_flow(hass)
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {CONF_SETUP_TYPE: SETUP_TYPE_WEATHER}
+        result["flow_id"], {"next_step_id": "weather_config"}
     )
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], {CONF_WEATHER_ENTITY: TEST_WEATHER}
@@ -147,11 +139,9 @@ async def test_weather_config_creates_entry(hass: HomeAssistant) -> None:
 
 async def test_weather_config_with_name(hass: HomeAssistant) -> None:
     """Test that weather config with a custom name uses it as title."""
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
-    )
+    result = await _start_flow(hass)
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {CONF_SETUP_TYPE: SETUP_TYPE_WEATHER}
+        result["flow_id"], {"next_step_id": "weather_config"}
     )
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
@@ -163,11 +153,9 @@ async def test_weather_config_with_name(hass: HomeAssistant) -> None:
 
 async def test_climate_config_creates_entry(hass: HomeAssistant) -> None:
     """Test that climate entity selection creates a config entry."""
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
-    )
+    result = await _start_flow(hass)
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {CONF_SETUP_TYPE: SETUP_TYPE_CLIMATE}
+        result["flow_id"], {"next_step_id": "climate_config"}
     )
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
@@ -301,11 +289,9 @@ def _register_sensor(
 
 async def test_discover_step_shows_discover_by_form(hass: HomeAssistant) -> None:
     """Selecting auto-discover opens the group-by step."""
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
-    )
+    result = await _start_flow(hass)
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {CONF_SETUP_TYPE: SETUP_TYPE_DISCOVER}
+        result["flow_id"], {"next_step_id": "discover"}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "discover_by"
@@ -313,11 +299,9 @@ async def test_discover_step_shows_discover_by_form(hass: HomeAssistant) -> None
 
 async def test_discover_by_area_shows_error_when_no_pairs(hass: HomeAssistant) -> None:
     """Show an inline error on discover_by when no areas have matching pairs."""
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
-    )
+    result = await _start_flow(hass)
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {CONF_SETUP_TYPE: SETUP_TYPE_DISCOVER}
+        result["flow_id"], {"next_step_id": "discover"}
     )
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], {CONF_DISCOVER_BY: DISCOVER_BY_AREA}
@@ -325,6 +309,19 @@ async def test_discover_by_area_shows_error_when_no_pairs(hass: HomeAssistant) -
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "discover_by"
     assert result["errors"] == {CONF_DISCOVER_BY: "no_devices_found"}
+
+
+async def test_discover_by_back_returns_to_user_menu(hass: HomeAssistant) -> None:
+    """Selecting 'back' on the discover_by step returns to the user menu."""
+    result = await _start_flow(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"next_step_id": "discover"}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_DISCOVER_BY: "back"}
+    )
+    assert result["type"] is FlowResultType.MENU
+    assert result["step_id"] == "user"
 
 
 async def test_discover_by_area_shows_select_form(hass: HomeAssistant) -> None:
@@ -336,11 +333,9 @@ async def test_discover_by_area_shows_select_form(hass: HomeAssistant) -> None:
     _register_sensor(entity_reg, "test", "lr_temp", SensorDeviceClass.TEMPERATURE, area_id=living_room.id)
     _register_sensor(entity_reg, "test", "lr_hum", SensorDeviceClass.HUMIDITY, area_id=living_room.id)
 
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
-    )
+    result = await _start_flow(hass)
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {CONF_SETUP_TYPE: SETUP_TYPE_DISCOVER}
+        result["flow_id"], {"next_step_id": "discover"}
     )
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], {CONF_DISCOVER_BY: DISCOVER_BY_AREA}
@@ -358,11 +353,9 @@ async def test_discover_by_area_creates_entry(hass: HomeAssistant) -> None:
     temp = _register_sensor(entity_reg, "test", "lr_temp", SensorDeviceClass.TEMPERATURE, area_id=living_room.id)
     hum = _register_sensor(entity_reg, "test", "lr_hum", SensorDeviceClass.HUMIDITY, area_id=living_room.id)
 
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
-    )
+    result = await _start_flow(hass)
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {CONF_SETUP_TYPE: SETUP_TYPE_DISCOVER}
+        result["flow_id"], {"next_step_id": "discover"}
     )
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], {CONF_DISCOVER_BY: DISCOVER_BY_AREA}
@@ -390,11 +383,9 @@ async def test_discover_multiple_areas_creates_additional_flows(hass: HomeAssist
     bt = _register_sensor(entity_reg, "test", "bd_temp", SensorDeviceClass.TEMPERATURE, area_id=bedroom.id)
     _register_sensor(entity_reg, "test", "bd_hum", SensorDeviceClass.HUMIDITY, area_id=bedroom.id)
 
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
-    )
+    result = await _start_flow(hass)
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {CONF_SETUP_TYPE: SETUP_TYPE_DISCOVER}
+        result["flow_id"], {"next_step_id": "discover"}
     )
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], {CONF_DISCOVER_BY: DISCOVER_BY_AREA}
@@ -426,11 +417,9 @@ async def test_discover_skips_already_configured(hass: HomeAssistant) -> None:
         data={CONF_SETUP_TYPE: SETUP_TYPE_MANUAL, CONF_TEMPERATURE: temp.entity_id, CONF_HUMIDITY: "sensor.other"},
     ).add_to_hass(hass)
 
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
-    )
+    result = await _start_flow(hass)
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {CONF_SETUP_TYPE: SETUP_TYPE_DISCOVER}
+        result["flow_id"], {"next_step_id": "discover"}
     )
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], {CONF_DISCOVER_BY: DISCOVER_BY_AREA}
@@ -457,11 +446,9 @@ async def test_discover_by_device_creates_entry(hass: HomeAssistant) -> None:
     temp = _register_sensor(entity_reg, "test", "ws_temp", SensorDeviceClass.TEMPERATURE, device_id=device.id)
     hum = _register_sensor(entity_reg, "test", "ws_hum", SensorDeviceClass.HUMIDITY, device_id=device.id)
 
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
-    )
+    result = await _start_flow(hass)
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {CONF_SETUP_TYPE: SETUP_TYPE_DISCOVER}
+        result["flow_id"], {"next_step_id": "discover"}
     )
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], {CONF_DISCOVER_BY: DISCOVER_BY_DEVICE}

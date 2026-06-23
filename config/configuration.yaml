@@ -1,4 +1,10 @@
-default_config:
+# Minimal config for local dev/testing - no default_config to avoid
+# mDNS/Zeroconf advertising that would conflict with a live HA instance.
+frontend:
+http:
+  server_port: 8124
+config:
+lovelace:
 
 logger:
   default: warning
@@ -25,8 +31,10 @@ sensor:
         unit_of_measurement: "°C"
         value_template: "{{ 22.6 }}"
         device_class: temperature
+        unique_id: test_temperature
 
       test_humidity:
-#        unit_of_measurement: "%"
+        unit_of_measurement: "%"
         value_template: "{{ 43 }}"
-#        device_class: humidity
+        device_class: humidity
+        unique_id: test_humidity

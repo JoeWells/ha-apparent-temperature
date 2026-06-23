@@ -41,22 +41,6 @@ from .const import (
     SETUP_TYPE_WEATHER,
 )
 
-STEP_TYPE_SCHEMA = vol.Schema(
-    {
-        vol.Required(CONF_SETUP_TYPE): SelectSelector(
-            SelectSelectorConfig(
-                options=[
-                    {"value": SETUP_TYPE_MANUAL, "label": "Manual sensors"},
-                    {"value": SETUP_TYPE_WEATHER, "label": "Weather entity"},
-                    {"value": SETUP_TYPE_CLIMATE, "label": "Climate entity"},
-                    {"value": SETUP_TYPE_DISCOVER, "label": "Auto-discover rooms / devices"},
-                ],
-                mode=SelectSelectorMode.LIST,
-            )
-        )
-    }
-)
-
 STEP_DISCOVER_BY_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_DISCOVER_BY): SelectSelector(
@@ -64,6 +48,7 @@ STEP_DISCOVER_BY_SCHEMA = vol.Schema(
                 options=[
                     {"value": DISCOVER_BY_AREA, "label": "By room (HA area)"},
                     {"value": DISCOVER_BY_DEVICE, "label": "By device"},
+                    {"value": "back", "label": "← Change setup type"},
                 ],
                 mode=SelectSelectorMode.LIST,
             )
@@ -165,23 +150,16 @@ class ApparentTemperatureConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._discovered_pairs: list[dict] = []
 
     # ------------------------------------------------------------------
-    # Step 1: type selection
+    # Step 1: type selection (menu)
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.ConfigFlowResult:
-        """Handle setup type selection."""
-        if user_input is not None:
-            setup_type = user_input[CONF_SETUP_TYPE]
-            if setup_type == SETUP_TYPE_WEATHER:
-                return await self.async_step_weather_config()
-            if setup_type == SETUP_TYPE_CLIMATE:
-                return await self.async_step_climate_config()
-            if setup_type == SETUP_TYPE_DISCOVER:
-                return await self.async_step_discover_by()
-            return await self.async_step_manual_config()
-
-        return self.async_show_form(step_id="user", data_schema=STEP_TYPE_SCHEMA)
+        """Show the setup-type menu."""
+        return self.async_show_menu(
+            step_id="user",
+            menu_options=["manual_config", "weather_config", "climate_config", "discover"],
+        )
 
     # ------------------------------------------------------------------
     # Manual / Weather / Climate config steps
@@ -231,6 +209,12 @@ class ApparentTemperatureConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     # ------------------------------------------------------------------
     # Auto-discover steps
 
+    async def async_step_discover(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
+        """Entry point from the user menu — go straight to grouping choice."""
+        return await self.async_step_discover_by()
+
     async def async_step_discover_by(
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.ConfigFlowResult:
@@ -239,6 +223,8 @@ class ApparentTemperatureConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             discover_by = user_input[CONF_DISCOVER_BY]
+            if discover_by == "back":
+                return await self.async_step_user()
             pairs = (
                 self._find_area_pairs()
                 if discover_by == DISCOVER_BY_AREA
