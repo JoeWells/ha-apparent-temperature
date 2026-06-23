@@ -1,10 +1,4 @@
-# Minimal config for local dev/testing - no default_config to avoid
-# mDNS/Zeroconf advertising that would conflict with a live HA instance.
-frontend:
-http:
-  server_port: 8124
-config:
-lovelace:
+default_config:
 
 logger:
   default: warning
