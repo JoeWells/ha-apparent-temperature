@@ -473,6 +473,48 @@ async def test_discover_by_device_creates_entry(hass: HomeAssistant) -> None:
     assert result["data"][CONF_HUMIDITY] == hum.entity_id
 
 
+async def test_import_step_creates_entry_without_ui(hass: HomeAssistant) -> None:
+    """async_step_import creates an entry directly from data without showing a form."""
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": config_entries.SOURCE_IMPORT},
+        data={
+            CONF_SETUP_TYPE: SETUP_TYPE_MANUAL,
+            CONF_TEMPERATURE: TEST_TEMP,
+            CONF_HUMIDITY: TEST_HUMIDITY,
+            CONF_NAME: "Imported Room",
+        },
+    )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["title"] == "Imported Room"
+    assert result["data"][CONF_TEMPERATURE] == TEST_TEMP
+
+
+async def test_options_flow_for_discover_entry_uses_manual_config_step(hass: HomeAssistant) -> None:
+    """Options flow for a discover-created entry opens manual_config (not a non-existent discover step)."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={
+            CONF_SETUP_TYPE: SETUP_TYPE_DISCOVER,
+            CONF_TEMPERATURE: TEST_TEMP,
+            CONF_HUMIDITY: TEST_HUMIDITY,
+            CONF_NAME: "Kitchen",
+        },
+        title="Kitchen",
+    )
+    entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "manual_config"
+
+    schema = result["data_schema"].schema
+    temp_key = next(k for k in schema if k == CONF_TEMPERATURE)
+    assert temp_key.default() == TEST_TEMP
+
+
 async def test_options_flow_reads_from_options_over_data(hass: HomeAssistant) -> None:
     """Test options form pre-fills from entry.options when both data and options exist."""
     overridden_temp = "sensor.override_temperature"
