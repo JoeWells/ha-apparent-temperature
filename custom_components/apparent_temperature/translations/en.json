@@ -1,0 +1,89 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "Set up Apparent Temperature",
+                "data": {
+                    "setup_type": "Setup method"
+                },
+                "data_description": {
+                    "setup_type": "Choose how to provide temperature and humidity data."
+                }
+            },
+            "manual_config": {
+                "title": "Select source sensors",
+                "data": {
+                    "temperature": "Temperature sensor",
+                    "humidity": "Humidity sensor",
+                    "wind_speed": "Wind speed sensor",
+                    "name": "Sensor name"
+                },
+                "data_description": {
+                    "wind_speed": "Optional. Without it, wind chill is excluded from the calculation.",
+                    "name": "Leave blank to auto-generate a name from the temperature sensor."
+                }
+            },
+            "weather_config": {
+                "title": "Select weather entity",
+                "data": {
+                    "weather": "Weather entity",
+                    "name": "Sensor name"
+                },
+                "data_description": {
+                    "name": "Leave blank to auto-generate a name from the weather entity."
+                }
+            },
+            "climate_config": {
+                "title": "Select climate entity",
+                "data": {
+                    "climate": "Climate entity",
+                    "wind_speed": "Wind speed sensor",
+                    "name": "Sensor name"
+                },
+                "data_description": {
+                    "wind_speed": "Optional. Without it, wind chill is excluded from the calculation.",
+                    "name": "Leave blank to auto-generate a name from the climate entity."
+                }
+            }
+        }
+    },
+    "options": {
+        "step": {
+            "manual_config": {
+                "title": "Configure source sensors",
+                "data": {
+                    "temperature": "Temperature sensor",
+                    "humidity": "Humidity sensor",
+                    "wind_speed": "Wind speed sensor",
+                    "name": "Sensor name"
+                },
+                "data_description": {
+                    "wind_speed": "Optional. Without it, wind chill is excluded from the calculation.",
+                    "name": "Leave blank to auto-generate a name from the temperature sensor."
+                }
+            },
+            "weather_config": {
+                "title": "Configure weather entity",
+                "data": {
+                    "weather": "Weather entity",
+                    "name": "Sensor name"
+                },
+                "data_description": {
+                    "name": "Leave blank to auto-generate a name from the weather entity."
+                }
+            },
+            "climate_config": {
+                "title": "Configure climate entity",
+                "data": {
+                    "climate": "Climate entity",
+                    "wind_speed": "Wind speed sensor",
+                    "name": "Sensor name"
+                },
+                "data_description": {
+                    "wind_speed": "Optional. Without it, wind chill is excluded from the calculation.",
+                    "name": "Leave blank to auto-generate a name from the climate entity."
+                }
+            }
+        }
+    }
+}

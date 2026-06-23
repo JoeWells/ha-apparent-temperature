@@ -49,6 +49,7 @@ from homeassistant.core import (
     callback,
     split_entity_id,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import async_track_state_change_event
@@ -62,6 +63,11 @@ from .const import (
     ATTR_TEMPERATURE_SOURCE_VALUE,
     ATTR_WIND_SPEED_SOURCE,
     ATTR_WIND_SPEED_SOURCE_VALUE,
+    CONF_CLIMATE_ENTITY,
+    CONF_HUMIDITY,
+    CONF_TEMPERATURE,
+    CONF_WEATHER_ENTITY,
+    CONF_WIND_SPEED,
     STARTUP_MESSAGE,
 )
 
@@ -74,6 +80,35 @@ PLATFORM_SCHEMA = cv.PLATFORM_SCHEMA.extend(
         vol.Optional(CONF_UNIQUE_ID): cv.string,
     }
 )
+
+
+async def async_setup_entry(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+    """Set up the sensor from a config entry."""
+    data = {**entry.data, **entry.options}
+
+    source_keys = [
+        CONF_WEATHER_ENTITY,
+        CONF_CLIMATE_ENTITY,
+        CONF_TEMPERATURE,
+        CONF_HUMIDITY,
+        CONF_WIND_SPEED,
+    ]
+    sources = [data[k] for k in source_keys if data.get(k)]
+    name = data.get(CONF_NAME) or None
+
+    async_add_entities(
+        [
+            ApparentTemperatureSensor(
+                entry.entry_id,
+                name,
+                expand_entity_ids(hass, sources),
+            )
+        ]
+    )
 
 
 # pylint: disable=unused-argument

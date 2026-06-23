@@ -19,6 +19,19 @@ If you have ANY issues with this you need to open an issue here:
 """
 
 
+# Config flow keys
+CONF_TEMPERATURE: Final = "temperature"
+CONF_HUMIDITY: Final = "humidity"
+CONF_WIND_SPEED: Final = "wind_speed"
+CONF_WEATHER_ENTITY: Final = "weather"
+CONF_CLIMATE_ENTITY: Final = "climate"
+CONF_SETUP_TYPE: Final = "setup_type"
+
+SETUP_TYPE_MANUAL: Final = "manual"
+SETUP_TYPE_WEATHER: Final = "weather"
+SETUP_TYPE_CLIMATE: Final = "climate"
+
+
 # Attributes
 ATTR_TEMPERATURE_SOURCE: Final = "temperature_source"
 ATTR_TEMPERATURE_SOURCE_VALUE: Final = "temperature_source_value"
